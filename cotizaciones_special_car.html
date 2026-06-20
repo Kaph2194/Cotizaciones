@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cotizaciones Special Car</title>
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+
+<div class="header">
+  <div style="display:flex;align-items:center;gap:14px">
+    <img id="headerLogo" style="height:44px;object-fit:contain" alt="Special Car">
+    <div class="logo-text">Sistema de Cotizaciones</div>
+  </div>
+  <div style="font-size:0.75rem;opacity:0.7;">Transporte Especial Empresarial</div>
+</div>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <h2>📋 Datos del Cliente</h2>
+
+    <div class="form-group">
+      <label>Cliente (Señores:)</label>
+      <div style="position:relative">
+        <input type="text" id="cliente" placeholder="Buscar cliente..." oninput="filtrarClientes(this.value)" onfocus="mostrarDropdown()" onblur="setTimeout(()=>ocultarDropdown(),200)" autocomplete="off" style="width:100%;padding:8px 10px;border:1px solid #c8d0dc;border-radius:5px;font-size:0.875rem;color:#27367c;background:#f8fafc">
+        <div id="clienteDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #c8d0dc;border-top:none;border-radius:0 0 5px 5px;max-height:180px;overflow-y:auto;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,0.1)"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Fecha</label>
+      <input type="date" id="fecha" oninput="render()">
+    </div>
+    <div class="form-group">
+      <label>Persona que firma</label>
+      <select id="firmante" onchange="render()">
+        <option value="">-- Seleccionar --</option>
+        <option value="José Miguel Rozo|Jefe de Operaciones">José Miguel Rozo – Jefe de Operaciones</option>
+        <option value="Christian Cifuentes|Coordinador de operaciones">Christian Cifuentes – Coordinador de Operaciones</option>
+        <option value="Miguel Moyano|Coordinador de operaciones">Miguel Moyano – Coordinador de Operaciones</option>
+        <option value="otro">Otro...</option>
+      </select>
+    </div>
+    <div class="form-group" id="firmante-custom-group" style="display:none">
+      <label>Nombre</label>
+      <input type="text" id="firmante-nombre" placeholder="Nombre completo" oninput="render()">
+      <label style="margin-top:6px">Cargo</label>
+      <input type="text" id="firmante-cargo" placeholder="Cargo" oninput="render()">
+    </div>
+
+    <hr class="divider">
+    <h2>🚐 Traslados (Descripción General)</h2>
+    <div class="form-group">
+      <label>Tipo de Vehículo</label>
+      <select id="tipoVehiculo" onchange="updatePorcentaje()">
+        <option value="">-- Seleccionar --</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Descripción del Traslado</label>
+      <textarea id="descTraslado" placeholder="Ej: Bogotá – Hotel Chía para 80 pasajeros" oninput="render()"></textarea>
+    </div>
+
+    <hr class="divider">
+    <h2>➕ Agregar Servicio</h2>
+
+    <div class="form-group">
+      <label>Valor del proveedor ($)</label>
+      <input type="number" id="valorProveedor" placeholder="0" oninput="calcularServicio()">
+    </div>
+    <div class="form-group">
+      <label>% de Ganancia</label>
+      <input type="number" id="porcentaje" placeholder="Ej: 30" min="0" max="100" step="0.1" oninput="calcularServicio()" style="width:100%;padding:8px 10px;border:1px solid #c8d0dc;border-radius:5px;font-size:0.875rem;color:#1a2a4a;background:#f8fafc">
+      <div class="hint">Ingrese el porcentaje manualmente · Referencia: 30% General · 25% Buses</div>
+    </div>
+    <div class="form-group">
+      <label>Valor del Servicio (calculado)</label>
+      <div class="computed-value" id="valorServicioCalc">$0</div>
+    </div>
+    <div class="form-group">
+      <label>Descripción del Servicio</label>
+      <textarea id="descServicio" placeholder="Ej: Bus 40 pasajeros Trayecto IDA" rows="2"></textarea>
+    </div>
+    <button class="btn btn-secondary" onclick="agregarServicio()">＋ Agregar Servicio</button>
+
+    <div class="service-list" id="serviceList"></div>
+
+    <hr class="divider">
+    <h2>🖨️ Acciones</h2>
+    <div style="margin-bottom:10px">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px;background:#f0f4f8;border-radius:6px;border:1.5px solid #c8d0dc">
+        <div style="position:relative;width:42px;height:22px;flex-shrink:0">
+          <input type="checkbox" id="toggleFotos" onchange="toggleFotosVehiculos()" style="opacity:0;width:0;height:0;position:absolute">
+          <div id="toggleTrack" style="position:absolute;inset:0;background:#c8d0dc;border-radius:11px;transition:background 0.2s"></div>
+          <div id="toggleThumb" style="position:absolute;top:3px;left:3px;width:16px;height:16px;background:white;border-radius:50%;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.3)"></div>
+        </div>
+        <div>
+          <div style="font-size:0.8rem;font-weight:600;color:#27367c">Incluir fotos de vehículos</div>
+          <div style="font-size:0.68rem;color:#718096">Activa para cargar tus propias fotos</div>
+        </div>
+      </label>
+    </div>
+
+    <!-- Photo upload panels (visible only when toggle is ON) -->
+    <div id="fotosUploadPanel" style="display:none;margin-bottom:10px">
+      <div style="background:#f0f4f8;border-radius:7px;padding:12px;margin-bottom:8px">
+        <div style="font-size:0.75rem;font-weight:700;color:#27367c;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">📷 VAN 16 PASAJEROS <span style="font-weight:400;color:#718096">(máx 2 fotos)</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <label id="lblVan1" style="cursor:pointer;border:2px dashed #c8d0dc;border-radius:5px;height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:0.65rem;color:#718096;overflow:hidden;position:relative">
+            <input type="file" accept="image/*" onchange="cargarFoto('van',0,this)" style="display:none">
+            <div id="preVan1" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px">
+              <span style="font-size:1.2rem">＋</span><span>Foto 1</span>
+            </div>
+          </label>
+          <label id="lblVan2" style="cursor:pointer;border:2px dashed #c8d0dc;border-radius:5px;height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:0.65rem;color:#718096;overflow:hidden;position:relative">
+            <input type="file" accept="image/*" onchange="cargarFoto('van',1,this)" style="display:none">
+            <div id="preVan2" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px">
+              <span style="font-size:1.2rem">＋</span><span>Foto 2</span>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div style="background:#f0f4f8;border-radius:7px;padding:12px">
+        <div style="font-size:0.75rem;font-weight:700;color:#27367c;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">📷 BUSES 40 PASAJEROS <span style="font-weight:400;color:#718096">(máx 2 fotos)</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <label id="lblBus1" style="cursor:pointer;border:2px dashed #c8d0dc;border-radius:5px;height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:0.65rem;color:#718096;overflow:hidden;position:relative">
+            <input type="file" accept="image/*" onchange="cargarFoto('bus',0,this)" style="display:none">
+            <div id="preBus1" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px">
+              <span style="font-size:1.2rem">＋</span><span>Foto 1</span>
+            </div>
+          </label>
+          <label id="lblBus2" style="cursor:pointer;border:2px dashed #c8d0dc;border-radius:5px;height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:0.65rem;color:#718096;overflow:hidden;position:relative">
+            <input type="file" accept="image/*" onchange="cargarFoto('bus',1,this)" style="display:none">
+            <div id="preBus2" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px">
+              <span style="font-size:1.2rem">＋</span><span>Foto 2</span>
+            </div>
+          </label>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="window.print()">Imprimir / Guardar PDF</button>
+    <button class="btn btn-outline" onclick="limpiarTodo()">🗑 Limpiar Todo</button>
+
+    <hr class="divider">
+    <div style="font-size:0.7rem;color:#888;line-height:1.6">
+      <b>Gestión de clientes:</b><br>
+      <button class="btn btn-outline btn-sm" style="margin-top:4px;width:100%" onclick="agregarClienteModal()">+ Nuevo Cliente</button>
+      <button class="btn btn-outline btn-sm" style="margin-top:4px;width:100%" onclick="agregarVehiculoModal()">+ Nuevo Tipo Vehículo</button>
+    </div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="preview">
+    <div class="print-area">
+      <div class="preview-label">VISTA PREVIA DE COTIZACIÓN</div>
+    </div>
+    <div class="doc" id="doc">
+      <!-- rendered by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div id="modalCliente" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:none;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:10px;padding:28px;width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
+    <h3 style="margin-bottom:16px;color:#27367c">Agregar Cliente</h3>
+    <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px">Nombre como aparece en el RUT</label>
+    <input type="text" id="nuevoClienteNombre" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:5px;font-size:0.875rem;margin-bottom:14px" placeholder="Nombre completo del cliente">
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary btn-sm" style="flex:1;padding:10px" onclick="guardarCliente()">Agregar Cliente</button>
+      <button class="btn btn-outline btn-sm" style="flex:1;padding:10px" onclick="cerrarModal('modalCliente')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="modalVehiculo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:none;align-items:center;justify-content:center">
+  <div style="background:white;border-radius:10px;padding:28px;width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.3)">
+    <h3 style="margin-bottom:16px;color:#27367c">Agregar Tipo de Vehículo</h3>
+    <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px">Tipo de Vehículo (Ej: "Bus 23 pax")</label>
+    <input type="text" id="nuevoVehNombre" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:5px;font-size:0.875rem;margin-bottom:10px" placeholder="Bus 23 pasajeros">
+    <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:4px">Cantidad máxima de pasajeros</label>
+    <input type="number" id="nuevoVehPax" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:5px;font-size:0.875rem;margin-bottom:14px" placeholder="23">
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-secondary btn-sm" style="flex:1;padding:10px" onclick="guardarVehiculo()">Agregar Vehículo</button>
+      <button class="btn btn-outline btn-sm" style="flex:1;padding:10px" onclick="cerrarModal('modalVehiculo')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── IMÁGENES EMBEBIDAS (base64, sin dependencias externas) ──
+const IMG_LOGO = "assets/Specialcar.png";
+const IMG_SUPERTRANSPORTE = "assets/supertransporte.png";
+const IMG_BUREAUVERITAS = "assets/bureauveritas.png";
+const IMG_VAN1 = "assets/van1.jpeg";
+const IMG_VAN2 = "assets/van2.jpeg";
+const IMG_BUS1 = "assets/bus1.jpeg";
+const IMG_BUS2 = "assets/bus2.jpeg";
+
+// ── STATE ──
+const state = {
+  clientes: [
+    'ARISTIZABAL Y JINETE','LEVIN ASSETS','YANBAL','COLOMBO ESPAÑOLA',
+    'FUNDACION UNIVERSITARIA CIENCIA DE LA SALUD','PUBBLICA','DIGITAL WARE',
+    'FIXIT','EFECTY','CLINICOS IPS','CL TIENE SOLUCIONES','WIN SPORTS',
+    'RUTA GAY','LONGPORT','ESRI','EPIDERMIQUE','ALTAS VISTAS','PAIS DE RAIZ',
+    'EXPEDITOR','Hoteles Suite Tequendama','MIKA','BLUE CARE',
+    'PARTIDO POLITICO MIRA','EXL SERVICE','BANCAMIA',
+    'AGENCIA NACIONAL DEL ESPECTRO','SAN GABRIEL','RICARDO GAITAN',
+    'DIEGO','HEEL','BTSAUTOVIAS','ROLDAN LOGISTICA'
+  ].sort(),
+  vehiculos: [
+    {tipo:'Dacia/Renault Logan', pax:4},
+    {tipo:'Kia Cerato', pax:4},
+    {tipo:'Renault Duster AWD', pax:4},
+    {tipo:'Renault Duster Oroch', pax:4},
+    {tipo:'DFSK Van 7 pasajeros', pax:7},
+    {tipo:'Hyundai H1', pax:8},
+    {tipo:'Renault Master', pax:15},
+    {tipo:'Mercedes-Benz Sprinter', pax:19},
+    {tipo:'Chevrolet N300', pax:7},
+    {tipo:'Chevrolet NPR', pax:7},
+    {tipo:'Isuzu NQR', pax:7},
+    {tipo:'Ford Transit', pax:19},
+    {tipo:'Mercedes-Benz O500', pax:40},
+    {tipo:'VAN 11 PAX', pax:11},
+    {tipo:'VAN 7 PAX', pax:7},
+    {tipo:'VAN 9 PAX', pax:9},
+    {tipo:'VAN 19 PAX', pax:19},
+    {tipo:'BUSETA 19 PAX', pax:19},
+    {tipo:'BUS 25 PAX', pax:25},
+    {tipo:'BUS 30 PAX', pax:30},
+    {tipo:'BUS 40 PAX', pax:40},
+    {tipo:'VAN 17 PAX', pax:17},
+    {tipo:'VAN 12 PAX', pax:12},
+  ],
+  servicios: [],
+  nextId: 1,
+  mostrarFotos: false,
+  fotos: { van: [null, null], bus: [null, null] }
+};
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded', () => {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('fecha').value = today;
+  document.getElementById('headerLogo').src = IMG_LOGO;
+  document.getElementById('toggleFotos').checked = false;
+  document.getElementById('toggleTrack').style.background = '#c8d0dc';
+  document.getElementById('toggleThumb').style.transform = 'translateX(0)';
+  populateVehiculos();
+  render();
+});
+
+function populateVehiculos() {
+  const sel = document.getElementById('tipoVehiculo');
+  sel.innerHTML = '<option value="">-- Seleccionar --</option>';
+  state.vehiculos.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.tipo;
+    opt.textContent = `${v.tipo} (${v.pax} pax)`;
+    sel.appendChild(opt);
+  });
+}
+
+function updateClienteSelect() { /* legacy, kept for compat */ }
+
+// ── CLIENTE DROPDOWN ──
+function filtrarClientes(q) {
+  render();
+  const dd = document.getElementById('clienteDropdown');
+  const filtrados = q.length === 0
+    ? state.clientes
+    : state.clientes.filter(c => c.toLowerCase().includes(q.toLowerCase()));
+  if (!filtrados.length) { dd.style.display = 'none'; return; }
+  dd.innerHTML = filtrados.map(c =>
+    `<div onclick="seleccionarCliente('${c.replace(/'/g,"\\'")}')"`+
+    ` style="padding:7px 10px;cursor:pointer;font-size:0.82rem;border-bottom:1px solid #f0f4f8"`+
+    ` onmouseover="this.style.background='#eef1f6'" onmouseout="this.style.background=''">${c}</div>`
+  ).join('');
+  dd.style.display = 'block';
+}
+
+function mostrarDropdown() {
+  filtrarClientes(document.getElementById('cliente').value);
+}
+
+function ocultarDropdown() {
+  document.getElementById('clienteDropdown').style.display = 'none';
+}
+
+function seleccionarCliente(nombre) {
+  document.getElementById('cliente').value = nombre;
+  document.getElementById('clienteDropdown').style.display = 'none';
+  render();
+}
+
+// ── PORCENTAJE AUTO ──
+function updatePorcentaje() {
+  const tipo = document.getElementById('tipoVehiculo').value.toLowerCase();
+  const input = document.getElementById('porcentaje');
+  // Only suggest if empty
+  if (!input.value) {
+    if (tipo.includes('bus') || tipo.includes('buseta')) input.value = '25';
+    else if (tipo) input.value = '30';
+  }
+  calcularServicio();
+  render();
+}
+
+// ── CALCULAR VALOR ──
+function calcularServicio() {
+  const prov = parseFloat(document.getElementById('valorProveedor').value) || 0;
+  const pct = parseFloat(document.getElementById('porcentaje').value) || 0;
+  const val = pct ? Math.round(prov * (1 + pct / 100)) : prov;
+  document.getElementById('valorServicioCalc').textContent = formatCOP(val);
+}
+
+// ── AGREGAR SERVICIO ──
+function agregarServicio() {
+  const prov = parseFloat(document.getElementById('valorProveedor').value) || 0;
+  const pct = parseFloat(document.getElementById('porcentaje').value) || 0;
+  const val = pct ? Math.round(prov * (1 + pct / 100)) : prov;
+  const desc = document.getElementById('descServicio').value.trim();
+  if (!desc || !val) { alert('Complete la descripción y el valor del servicio.'); return; }
+  state.servicios.push({ id: state.nextId++, desc, valor: val });
+  // reset
+  document.getElementById('valorProveedor').value = '';
+  document.getElementById('descServicio').value = '';
+  document.getElementById('valorServicioCalc').textContent = '$0';
+  updateServiceList();
+  render();
+}
+
+function eliminarServicio(id) {
+  state.servicios = state.servicios.filter(s => s.id !== id);
+  // re-number ids kept
+  updateServiceList();
+  render();
+}
+
+function updateServiceList() {
+  const list = document.getElementById('serviceList');
+  if (!state.servicios.length) { list.innerHTML = ''; return; }
+  list.innerHTML = state.servicios.map((s, i) => `
+    <div class="service-item">
+      <span class="s-desc">${i+1}. ${s.desc}</span>
+      <span class="s-val">${formatCOP(s.valor)}</span>
+      <button class="s-del" onclick="eliminarServicio(${s.id})" title="Eliminar">✕</button>
+    </div>
+  `).join('');
+}
+
+// ── FORMAT ──
+function formatCOP(n) {
+  return '$' + Math.round(n).toLocaleString('es-CO');
+}
+
+function formatFecha(dateStr) {
+  if (!dateStr) return '___';
+  const [y, m, d] = dateStr.split('-');
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  return `${parseInt(d)} de ${meses[parseInt(m)-1]} de ${y}`;
+}
+
+// ── FIRMANTE ──
+function getFirmante() {
+  const sel = document.getElementById('firmante').value;
+  document.getElementById('firmante-custom-group').style.display = sel === 'otro' ? 'block' : 'none';
+  if (sel === 'otro') {
+    return {
+      nombre: document.getElementById('firmante-nombre').value || '___',
+      cargo: document.getElementById('firmante-cargo').value || '___'
+    };
+  }
+  if (sel) {
+    const [nombre, cargo] = sel.split('|');
+    return { nombre, cargo };
+  }
+  return { nombre: '___________________', cargo: '___________________' };
+}
+
+// ── RENDER ──
+function render() {
+  const cliente = document.getElementById('cliente').value || '___';
+  const fecha = document.getElementById('fecha').value;
+  const tipoVeh = document.getElementById('tipoVehiculo').value;
+  const descTraslado = document.getElementById('descTraslado').value;
+  const firmante = getFirmante();
+
+  // traslados section
+  const traslados = descTraslado.trim()
+    ? descTraslado.split('\n').filter(l => l.trim())
+    : [];
+
+  const total = state.servicios.reduce((s, x) => s + x.valor, 0);
+
+  document.getElementById('doc').innerHTML = `
+    <div class="doc-header">
+      <div style="display:flex;align-items:center;padding:4px 0">
+        <img src="${IMG_LOGO}" style="height:120px;object-fit:contain" alt="Special Car Logo">
+      </div>
+      <div style="text-align:right;font-size:0.72rem;line-height:1.9;color:rgba(255,255,255,0.92)">
+        <div>☎&nbsp; +57 601 5730521</div>
+        <div>📍&nbsp; Carrera 45 # 144 – 21 Bogotá D.C.</div>
+        <div>📍&nbsp; Carrera 69F # 19ª -91 Bogotá D.C.</div>
+        <div style="color:#c9a820">✉&nbsp; Gerente@specialcar.com.co</div>
+        <div style="color:#c9a820">🌐&nbsp; www.specialcar.com.co</div>
+      </div>
+    </div>
+    <div class="doc-title-bar">COTIZACIÓN TRANSPORTE ESPECIAL</div>
+    <div class="doc-body">
+      <div class="doc-meta">
+        <div>
+          <div class="date">Bogotá, ${formatFecha(fecha)}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:0.7rem;color:#666">Señores:</div>
+          <div class="client-name">${cliente}</div>
+        </div>
+      </div>
+
+      <div class="doc-intro">
+        Es un gusto para <strong>SPECIAL CAR S.A.S.</strong> poner a su disposición nuestra propuesta para el transporte especial de su personal. Contamos con una flota de vehículos de placa blanca que garantiza seguridad y cumplimiento normativo.<br><br>
+        Nuestra compañía se encuentra formalmente inscrita bajo la matrícula mercantil No. <strong>03062631</strong> y cuenta con la habilitación oficial del Ministerio de Transporte, según lo dispuesto en la Resolución <strong>20203040011735</strong> de 2020.
+      </div>
+
+      ${traslados.length ? `
+      <div class="section-label">TRASLADOS</div>
+      <table class="traslados-table">
+        ${traslados.map(t => `<tr><td>${t}</td></tr>`).join('')}
+      </table>
+      ` : ''}
+
+      ${state.servicios.length ? `
+      <div class="section-label">TARIFARIO DETALLADO DE TRAYECTOS</div>
+      <table class="servicios-table">
+        <thead>
+          <tr>
+            <th style="width:40px">#</th>
+            <th>ORIGEN – DESTINO / DESCRIPCIÓN</th>
+            <th style="width:120px;text-align:right">VALOR</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${state.servicios.map((s, i) => `
+            <tr>
+              <td>${i+1}</td>
+              <td>${s.desc}</td>
+              <td class="valor">${formatCOP(s.valor)}</td>
+            </tr>
+          `).join('')}
+          <tr class="total-row">
+            <td colspan="2"><strong>Total Cotización</strong></td>
+            <td class="valor"><strong>${formatCOP(total)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+      ` : `
+      <div style="background:#f8fafc;border:1.5px dashed #c8d0dc;border-radius:6px;padding:24px;text-align:center;color:#90a0b4;font-size:0.8rem;margin:16px 0">
+        Agregue servicios en el panel izquierdo para verlos aquí.
+      </div>
+      `}
+
+      <div class="terms">
+        <strong><em>Términos y Condiciones de la Oferta:</em></strong><br>
+        <em><strong>Validez:</strong> Esta cotización es válida por 30 días calendario a partir de su emisión. 
+        <strong>Alcance:</strong> El valor presentado incluye exclusivamente los servicios, trayectos y horarios descritos. Cualquier servicio adicional, tiempo extra o modificación en la ruta podrá generar costos adicionales. 
+        <strong>Anticipos:</strong> Para servicios que requieran una capacidad superior a 11 pasajeros (PAX), se solicita un anticipo del 50% del valor total para confirmar la reserva.</em>
+      </div>
+
+      <div style="font-size:0.78rem;margin-bottom:14px">Atentamente,</div>
+      <div class="firma-area" style="margin-bottom:48px">
+        <div class="firma-block">
+          <div class="firma-line"></div>
+          <div class="firma-name">${firmante.nombre}</div>
+          <div class="firma-cargo">${firmante.cargo}</div>
+          <div class="firma-cargo" style="font-weight:600;color:#27367c;margin-top:2px">Grupo Special CAR</div>
+        </div>
+      </div>
+
+      ${state.mostrarFotos ? `
+      <div style="margin-top:24px">
+        <div class="section-label">FOTOGRAFÍAS VEHÍCULOS</div>
+        ${(state.fotos.van[0]||state.fotos.van[1]) ? `
+        <div style="margin-bottom:10px;font-size:0.72rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px">VAN 16 PASAJEROS</div>
+        <div style="display:grid;grid-template-columns:${state.fotos.van[0]&&state.fotos.van[1]?'1fr 1fr':'1fr'};gap:10px;margin-bottom:14px">
+          ${state.fotos.van[0]?`<img src="${state.fotos.van[0]}" style="width:100%;border-radius:6px;object-fit:cover;height:160px;border:1px solid #dde">`:''}
+          ${state.fotos.van[1]?`<img src="${state.fotos.van[1]}" style="width:100%;border-radius:6px;object-fit:cover;height:160px;border:1px solid #dde">`:''}
+        </div>` : ''}
+        ${(state.fotos.bus[0]||state.fotos.bus[1]) ? `
+        <div style="margin-bottom:10px;font-size:0.72rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px">BUSES 40 PASAJEROS</div>
+        <div style="display:grid;grid-template-columns:${state.fotos.bus[0]&&state.fotos.bus[1]?'1fr 1fr':'1fr'};gap:10px;margin-bottom:18px">
+          ${state.fotos.bus[0]?`<img src="${state.fotos.bus[0]}" style="width:100%;border-radius:6px;object-fit:cover;height:160px;border:1px solid #dde">`:''}
+          ${state.fotos.bus[1]?`<img src="${state.fotos.bus[1]}" style="width:100%;border-radius:6px;object-fit:cover;height:160px;border:1px solid #dde">`:''}
+        </div>` : ''}
+        ${(!state.fotos.van[0]&&!state.fotos.van[1]&&!state.fotos.bus[0]&&!state.fotos.bus[1]) ? `
+        <div style="background:#f8fafc;border:1.5px dashed #c8d0dc;border-radius:6px;padding:18px;text-align:center;color:#90a0b4;font-size:0.8rem">
+          Carga las fotos en el panel izquierdo para que aparezcan aquí.
+        </div>` : ''}
+      </div>
+      ` : ''}
+
+      <div style="margin:0 -32px -24px;background:#27367c;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px">
+        <img src="${IMG_SUPERTRANSPORTE}" style="height:130px;object-fit:contain" alt="Vigilado SuperTransporte">
+        <img src="${IMG_BUREAUVERITAS}" style="height:60px;object-fit:contain" alt="Bureau Veritas ISO 9001 14001 45001">
+      </div>
+    </div>
+  `;
+}
+
+// ── MODAL CLIENTE ──
+function agregarClienteModal() {
+  document.getElementById('modalCliente').style.display = 'flex';
+  document.getElementById('nuevoClienteNombre').value = '';
+  document.getElementById('nuevoClienteNombre').focus();
+}
+function guardarCliente() {
+  const nombre = document.getElementById('nuevoClienteNombre').value.trim();
+  if (!nombre) { alert('Ingrese el nombre del cliente.'); return; }
+  if (!state.clientes.includes(nombre)) {
+    state.clientes.push(nombre);
+    state.clientes.sort();
+  }
+  document.getElementById('cliente').value = nombre;
+  cerrarModal('modalCliente');
+  render();
+}
+
+// ── MODAL VEHÍCULO ──
+function agregarVehiculoModal() {
+  document.getElementById('modalVehiculo').style.display = 'flex';
+  document.getElementById('nuevoVehNombre').value = '';
+  document.getElementById('nuevoVehPax').value = '';
+}
+function guardarVehiculo() {
+  const tipo = document.getElementById('nuevoVehNombre').value.trim();
+  const pax = parseInt(document.getElementById('nuevoVehPax').value) || 0;
+  if (!tipo) { alert('Ingrese el tipo de vehículo.'); return; }
+  state.vehiculos.push({ tipo, pax });
+  populateVehiculos();
+  document.getElementById('tipoVehiculo').value = tipo;
+  cerrarModal('modalVehiculo');
+  updatePorcentaje();
+}
+
+function cerrarModal(id) {
+  document.getElementById(id).style.display = 'none';
+}
+
+// Close modal on backdrop click
+['modalCliente','modalVehiculo'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) cerrarModal(id);
+  });
+});
+
+// ── TOGGLE FOTOS ──
+function toggleFotosVehiculos() {
+  const cb = document.getElementById('toggleFotos');
+  state.mostrarFotos = cb.checked;
+  const track = document.getElementById('toggleTrack');
+  const thumb = document.getElementById('toggleThumb');
+  track.style.background = cb.checked ? '#27367c' : '#c8d0dc';
+  thumb.style.transform = cb.checked ? 'translateX(20px)' : 'translateX(0)';
+  document.getElementById('fotosUploadPanel').style.display = cb.checked ? 'block' : 'none';
+  render();
+}
+
+// ── CARGAR FOTO ──
+function cargarFoto(tipo, idx, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    state.fotos[tipo][idx] = e.target.result;
+    // Show thumbnail preview in label
+    const preId = tipo === 'van' ? `preVan${idx+1}` : `preBus${idx+1}`;
+    const pre = document.getElementById(preId);
+    pre.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:3px">
+      <button onclick="eliminarFoto('${tipo}',${idx},event)" style="position:absolute;top:2px;right:2px;background:rgba(220,50,50,0.85);color:white;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:18px;text-align:center">✕</button>`;
+    pre.parentElement.style.border = '2px solid #27367c';
+    render();
+  };
+  reader.readAsDataURL(file);
+}
+
+function eliminarFoto(tipo, idx, e) {
+  e.preventDefault();
+  e.stopPropagation();
+  state.fotos[tipo][idx] = null;
+  const preId = tipo === 'van' ? `preVan${idx+1}` : `preBus${idx+1}`;
+  const pre = document.getElementById(preId);
+  pre.innerHTML = `<span style="font-size:1.2rem">＋</span><span>Foto ${idx+1}</span>`;
+  pre.parentElement.style.border = '2px dashed #c8d0dc';
+  // Reset file input
+  pre.parentElement.querySelector('input[type=file]').value = '';
+  render();
+}
+
+// ── LIMPIAR ──
+function limpiarTodo() {
+  if (!confirm('¿Desea limpiar todos los datos de la cotización?')) return;
+  document.getElementById('cliente').value = '';
+  document.getElementById('descTraslado').value = '';
+  document.getElementById('tipoVehiculo').value = '';
+  document.getElementById('firmante').value = '';
+  document.getElementById('valorProveedor').value = '';
+  document.getElementById('porcentaje').value = '';
+  document.getElementById('descServicio').value = '';
+  document.getElementById('valorServicioCalc').textContent = '$0';
+  state.servicios = [];
+  state.nextId = 1;
+  state.mostrarFotos = false;
+  document.getElementById('toggleFotos').checked = false;
+  document.getElementById('toggleTrack').style.background = '#c8d0dc';
+  document.getElementById('toggleThumb').style.transform = 'translateX(0)';
+  updateServiceList();
+  render();
+}
+</script>
+</body>
+</html>
