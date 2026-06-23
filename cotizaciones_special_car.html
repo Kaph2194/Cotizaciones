@@ -38,8 +38,8 @@
       <select id="firmante" onchange="render()">
         <option value="">-- Seleccionar --</option>
         <option value="José Miguel Rozo|Jefe de Operaciones">José Miguel Rozo – Jefe de Operaciones</option>
-        <option value="Christian Cifuentes|Coordinador de operaciones">Christian Cifuentes – Coordinador de Operaciones</option>
-        <option value="Miguel Moyano|Coordinador de operaciones">Miguel Moyano – Coordinador de Operaciones</option>
+        <option value="María García|Gerente Comercial">María García – Gerente Comercial</option>
+        <option value="Carlos López|Director General">Carlos López – Director General</option>
         <option value="otro">Otro...</option>
       </select>
     </div>
@@ -106,7 +106,7 @@
     <!-- Photo upload panels (visible only when toggle is ON) -->
     <div id="fotosUploadPanel" style="display:none;margin-bottom:10px">
       <div style="background:#f0f4f8;border-radius:7px;padding:12px;margin-bottom:8px">
-        <div style="font-size:0.75rem;font-weight:700;color:#27367c;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">📷 VAN 16 PASAJEROS <span style="font-weight:400;color:#718096">(máx 2 fotos)</span></div>
+        <div style="font-size:0.75rem;font-weight:700;color:#27367c;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">📷 <span id="fotoTituloPanel">VEHÍCULO SELECCIONADO</span> <span style="font-weight:400;color:#718096">(máx 2 fotos)</span></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
           <label id="lblVan1" style="cursor:pointer;border:2px dashed #c8d0dc;border-radius:5px;height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:0.65rem;color:#718096;overflow:hidden;position:relative">
             <input type="file" accept="image/*" onchange="cargarFoto('van',0,this)" style="display:none">
@@ -117,23 +117,6 @@
           <label id="lblVan2" style="cursor:pointer;border:2px dashed #c8d0dc;border-radius:5px;height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:0.65rem;color:#718096;overflow:hidden;position:relative">
             <input type="file" accept="image/*" onchange="cargarFoto('van',1,this)" style="display:none">
             <div id="preVan2" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px">
-              <span style="font-size:1.2rem">＋</span><span>Foto 2</span>
-            </div>
-          </label>
-        </div>
-      </div>
-      <div style="background:#f0f4f8;border-radius:7px;padding:12px">
-        <div style="font-size:0.75rem;font-weight:700;color:#27367c;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">📷 BUSES 40 PASAJEROS <span style="font-weight:400;color:#718096">(máx 2 fotos)</span></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <label id="lblBus1" style="cursor:pointer;border:2px dashed #c8d0dc;border-radius:5px;height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:0.65rem;color:#718096;overflow:hidden;position:relative">
-            <input type="file" accept="image/*" onchange="cargarFoto('bus',0,this)" style="display:none">
-            <div id="preBus1" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px">
-              <span style="font-size:1.2rem">＋</span><span>Foto 1</span>
-            </div>
-          </label>
-          <label id="lblBus2" style="cursor:pointer;border:2px dashed #c8d0dc;border-radius:5px;height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:0.65rem;color:#718096;overflow:hidden;position:relative">
-            <input type="file" accept="image/*" onchange="cargarFoto('bus',1,this)" style="display:none">
-            <div id="preBus2" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px">
               <span style="font-size:1.2rem">＋</span><span>Foto 2</span>
             </div>
           </label>
@@ -299,12 +282,18 @@ function seleccionarCliente(nombre) {
 
 // ── PORCENTAJE AUTO ──
 function updatePorcentaje() {
-  const tipo = document.getElementById('tipoVehiculo').value.toLowerCase();
+  const tipo = document.getElementById('tipoVehiculo').value;
   const input = document.getElementById('porcentaje');
-  // Only suggest if empty
+  // Sugerir % si el campo está vacío
   if (!input.value) {
-    if (tipo.includes('bus') || tipo.includes('buseta')) input.value = '25';
+    const tl = tipo.toLowerCase();
+    if (tl.includes('bus') || tl.includes('buseta')) input.value = '25';
     else if (tipo) input.value = '30';
+  }
+  // Actualizar título del panel de fotos
+  const tituloPanel = document.getElementById('fotoTituloPanel');
+  if (tituloPanel) {
+    tituloPanel.textContent = tipo ? tipo.toUpperCase() : 'VEHÍCULO SELECCIONADO';
   }
   calcularServicio();
   render();
@@ -400,7 +389,7 @@ function render() {
   document.getElementById('doc').innerHTML = `
     <div class="doc-header">
       <div style="display:flex;align-items:center;padding:4px 0">
-        <img src="${IMG_LOGO}" style="height:120px;object-fit:contain" alt="Special Car Logo">
+        <img src="${IMG_LOGO}" style="height:72px;object-fit:contain" alt="Special Car Logo">
       </div>
       <div style="text-align:right;font-size:0.72rem;line-height:1.9;color:rgba(255,255,255,0.92)">
         <div>☎&nbsp; +57 601 5730521</div>
@@ -485,18 +474,12 @@ function render() {
       <div style="margin-top:24px">
         <div class="section-label">FOTOGRAFÍAS VEHÍCULOS</div>
         ${(state.fotos.van[0]||state.fotos.van[1]) ? `
-        <div style="margin-bottom:10px;font-size:0.72rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px">VAN 16 PASAJEROS</div>
+        <div style="margin-bottom:10px;font-size:0.72rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px">${tipoVeh || 'VEHÍCULO'}</div>
         <div style="display:grid;grid-template-columns:${state.fotos.van[0]&&state.fotos.van[1]?'1fr 1fr':'1fr'};gap:10px;margin-bottom:14px">
           ${state.fotos.van[0]?`<img src="${state.fotos.van[0]}" style="width:100%;border-radius:6px;object-fit:cover;height:160px;border:1px solid #dde">`:''}
           ${state.fotos.van[1]?`<img src="${state.fotos.van[1]}" style="width:100%;border-radius:6px;object-fit:cover;height:160px;border:1px solid #dde">`:''}
         </div>` : ''}
-        ${(state.fotos.bus[0]||state.fotos.bus[1]) ? `
-        <div style="margin-bottom:10px;font-size:0.72rem;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.5px">BUSES 40 PASAJEROS</div>
-        <div style="display:grid;grid-template-columns:${state.fotos.bus[0]&&state.fotos.bus[1]?'1fr 1fr':'1fr'};gap:10px;margin-bottom:18px">
-          ${state.fotos.bus[0]?`<img src="${state.fotos.bus[0]}" style="width:100%;border-radius:6px;object-fit:cover;height:160px;border:1px solid #dde">`:''}
-          ${state.fotos.bus[1]?`<img src="${state.fotos.bus[1]}" style="width:100%;border-radius:6px;object-fit:cover;height:160px;border:1px solid #dde">`:''}
-        </div>` : ''}
-        ${(!state.fotos.van[0]&&!state.fotos.van[1]&&!state.fotos.bus[0]&&!state.fotos.bus[1]) ? `
+        ${(!state.fotos.van[0]&&!state.fotos.van[1]) ? `
         <div style="background:#f8fafc;border:1.5px dashed #c8d0dc;border-radius:6px;padding:18px;text-align:center;color:#90a0b4;font-size:0.8rem">
           Carga las fotos en el panel izquierdo para que aparezcan aquí.
         </div>` : ''}
@@ -504,7 +487,7 @@ function render() {
       ` : ''}
 
       <div style="margin:0 -32px -24px;background:#27367c;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px">
-        <img src="${IMG_SUPERTRANSPORTE}" style="height:130px;object-fit:contain" alt="Vigilado SuperTransporte">
+        <img src="${IMG_SUPERTRANSPORTE}" style="height:60px;object-fit:contain" alt="Vigilado SuperTransporte">
         <img src="${IMG_BUREAUVERITAS}" style="height:60px;object-fit:contain" alt="Bureau Veritas ISO 9001 14001 45001">
       </div>
     </div>
